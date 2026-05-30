@@ -1,0 +1,86 @@
+<div class="favorite-wrapper">
+    <form id="favorite-form" method="post" action="{% url 'accounts:add_to_favorites' product.slug %}" style="display:none;">
+        {% csrf_token %}
+    </form>
+    <button
+        type="button"
+        class="favorite-toggle {% if not user.is_authenticated %}not-logged-in{% endif %}"
+        data-product-slug="{{ product.slug }}"
+        data-is-liked="{% if is_favorite %}true{% else %}false{% endif %}"
+    >
+        <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-heart"></i>
+        <span class="action-text">
+            {% if is_favorite %}
+                حذف از علاقه‌مندی‌ها
+            {% else %}
+                افزودن به علاقه‌مندی‌ها
+            {% endif %}
+        </span>
+    </button>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggles = document.querySelectorAll('.favorite-toggle');
+
+    if (!toggles.length) return;
+
+    toggles.forEach(function (toggle) {
+        const heartIcon = toggle.querySelector('i');
+        const actionText = toggle.querySelector('.action-text');
+        const productSlug = toggle.dataset.productSlug;
+        let isLiked = toggle.dataset.isLiked === 'true';
+
+        function updateUI() {
+            if (!heartIcon || !actionText) return;
+
+            if (isLiked) {
+                heartIcon.classList.remove('far');
+                heartIcon.classList.add('fas');
+                actionText.textContent = 'حذف از علاقه‌مندی‌ها';
+            } else {
+                heartIcon.classList.remove('fas');
+                heartIcon.classList.add('far');
+                actionText.textContent = 'افزودن به علاقه‌مندی‌ها';
+            }
+        }
+
+        updateUI();
+
+        toggle.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            if (toggle.classList.contains('not-logged-in')) {
+                alert('لطفاً وارد حساب کاربری شوید.');
+                return;
+            }
+
+            const form = document.getElementById('favorite-form');
+            if (!form) return;
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                if (data && data.success) {
+                    isLiked = data.is_favorite;
+                    updateUI();
+                } else if (data && data.message) {
+                    alert(data.message);
+                } else {
+                    alert('خطا در پردازش درخواست');
+                }
+            })
+            .catch(function () {
+                alert('خطا در پردازش درخواست');
+            });
+        });
+    });
+});
+</script>

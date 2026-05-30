@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'css/login.css' %}">
+{% endblock extrastyle %}
+{% block content %}
+
+<div class="login-page">
+    <div class="login-box">
+        <h2 class="login-title">ورود به حساب</h2>
+
+
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label for="username">نام کاربری</label>
+                <input id="username" name="username" type="text" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">رمز عبور</label>
+                <input id="password" name="password" type="password" required>
+            </div>
+
+            <button type="submit" class="login-btn">ورود</button>
+        </form>
+      <div class="login-footer">
+        حساب ندارید؟
+        <a href="{% url 'accounts:register' %}">ثبت نام کنید</a>
+      </div>
+    </div>
+</div>
+{% endblock content %}

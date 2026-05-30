@@ -1,0 +1,99 @@
+<div class="rating-section">
+        <form id="rating-form-{{ product.slug }}" method="POST" action="{% url 'shop:rate_product' product.slug %}">
+            {% csrf_token %}
+            {# مقدار اولیه امتیاز را می توانید بر اساس امتیاز فعلی کاربر یا میانگین امتیاز تنظیم کنید #}
+            {# اگر می خواهید هنگام بارگذاری صفحه، ستاره ها بر اساس امتیاز قبلی کاربر هایلایت شوند، مقدار value را تنظیم کنید #}
+            {# مثلا: value="{{ current_user_rating|default:0 }}" #}
+            <input type="hidden" name="score" id="rating-score-{{ product.slug }}" value="0">
+
+            <div id="stars-{{ product.slug }}">
+                {# هر ستاره باید کلاس 'star' و attribute 'data-rating' داشته باشد #}
+                {# عدد data-rating نشان دهنده امتیاز واقعی آن ستاره است #}
+                <span class="star" data-rating="1">★</span>
+                <span class="star" data-rating="2">★</span>
+                <span class="star" data-rating="3">★</span>
+                <span class="star" data-rating="4">★</span>
+                <span class="star" data-rating="5">★</span>
+            </div>
+        </form>
+    </div>
+
+    <style>
+    #stars-{{ product.slug }} .star { /* کلاس .star را برای هدف قرار دادن ستاره ها استفاده می کنیم */
+        font-size: 30px;
+        cursor: pointer;
+        color: #ddd;
+        margin: 0 2px;
+        transition: color 0.2s ease-in-out; /* انتقال نرم برای تغییر رنگ */
+    }
+    /* استایل برای هایلایت شدن ستاره ها هنگام hover */
+    /* این بخش برای نمایش بصری است و منطق اصلی با جاوااسکریپت کار می کند */
+    #stars-{{ product.slug }} .star:hover,
+    #stars-{{ product.slug }} .star:hover ~ .star {
+        color: gold;
+    }
+    /* استایل برای ستاره های فعال شده توسط جاوااسکریپت (پس از کلیک) */
+    /* این بخش با جاوااسکریپت آپدیت می شود */
+    .highlighted { /* یک کلاس جدید برای ستاره های انتخاب شده */
+        color: gold !important; /* !important برای اطمینان از اعمال شدن */
+    }
+    </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        const starsContainer = document.getElementById('stars-{{ product.slug }}');
+        if (!starsContainer) return;
+
+        const stars = starsContainer.querySelectorAll('.star');
+        const scoreInput = document.getElementById('rating-score-{{ product.slug }}');
+        const form = document.getElementById('rating-form-{{ product.slug }}');
+
+        // تابعی برای رنگی کردن ستاره ها. 'rating' نشان دهنده حداکثر امتیاز نمایش داده شده است.
+        function updateStarStyles(rating) {
+            stars.forEach(star => {
+                const starRating = parseInt(star.getAttribute('data-rating'));
+                if (starRating <= rating) {
+                    star.classList.add('highlighted'); // ستاره انتخاب شده یا زیر آن
+                } else {
+                    star.classList.remove('highlighted'); // ستاره های بالاتر از امتیاز انتخاب شده
+                }
+            });
+        }
+
+        // تنظیم اولیه ستاره ها بر اساس مقدار فعلی input (مثلا اگر صفحه رفرش شد یا امتیاز قبلی وجود داشت)
+        // فرض کنید که امتیاز قبلی کاربر در scoreInput.value ذخیره شده است.
+        const currentStoredScore = parseInt(scoreInput.value) || 0;
+        if (currentStoredScore > 0) {
+            updateStarStyles(currentStoredScore);
+        }
+
+        // رویداد mouseover برای نمایش موقت ستاره ها هنگام بردن موس روی آنها
+        stars.forEach(star => {
+            star.addEventListener('mouseover', () => {
+                // اگر امتیازی از قبل ثبت شده است، با موس نباید وضعیت را تغییر دهد.
+                // اگر امتیاز ثبت نشده (scoreInput.value == 0)، آنگاه ستاره ها را بر اساس امتیاز ستاره فعلی هایلایت کن.
+                const rating = parseInt(star.getAttribute('data-rating'));
+                if (parseInt(scoreInput.value) === 0) { // فقط اگر امتیازی ثبت نشده باشد
+                    updateStarStyles(rating);
+                }
+            });
+
+            // رویداد mouseout برای بازگرداندن ستاره ها به حالت قبل (یا بر اساس امتیاز ثبت شده)
+            star.addEventListener('mouseout', () => {
+                // وقتی موس از روی ستاره ها برداشته می شود، ستاره ها را به حالت ذخیره شده (scoreInput.value) برگردان.
+                const storedScore = parseInt(scoreInput.value) || 0;
+                updateStarStyles(storedScore); // نمایش بر اساس امتیاز ذخیره شده
+            });
+
+            // رویداد کلیک برای ثبت امتیاز نهایی
+            star.addEventListener('click', () => {
+                const rating = parseInt(star.getAttribute('data-rating'));
+                scoreInput.value = rating;       // مقدار امتیاز انتخاب شده را در input قرار بده
+                updateStarStyles(rating);        // ستاره ها را بر اساس امتیاز جدید آپدیت کن
+                form.submit();                   // فرم را ارسال کن
+            });
+        });
+    });
+
+</script>

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <h2 class="auth-title">ثبت ‌نام</h2>
+
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="field">
+        {{ form.username.label_tag }}<br>
+        {{ form.username }}
+        {{ form.username.errors }}
+      </div>
+      <div class="field">
+        {{ form.first_name.label_tag }} <br>
+        {{ form.first_name }}
+        {{ form.first_name.errors }}
+      </div>
+      <div class="field">
+        {{ form.last_name.label_tag }} <br>
+        {{ form.last_name }}
+        {{ form.last_name.errors }}
+      </div>
+      <div class="field">
+        {{ form.email.label_tag }} <br>
+        {{ form.email }}
+        {{ form.email.errors }}
+      </div>
+      <div class="field">
+        {{ form.password1.label_tag }} <br>
+        {{ form.password1 }}
+        {{ form.password1.errors }}
+      </div>
+      <div class="field">
+        {{ form.password2.label_tag }} <br>
+        {{ form.password2 }}
+        {{ form.password2.errors }}
+      </div>
+      <button type="submit" class="btn">ثبت نام</button>
+    </form>
+    </div>
+</div>
+{% block extra_css %}
+<style>
+  .auth-page{
+    min-height: 80vh;
+    display:flex;
+    justify-content:center; /* وسط افقی */
+    align-items:center;     /* وسط عمودی */
+    padding: 20px;
+  }
+  .auth-card{
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.05);
+  }
+  .auth-title{
+    margin: 0 0 16px 0;
+    text-align:center;
+  }
+  .auth-form .field{
+    margin-bottom: 14px;
+  }
+  .auth-form label{
+    display:block;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .auth-form input{
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+  .auth-form .btn{
+    width:100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #59ab6e;
+    color: #ffff;
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+{% endblock  %}

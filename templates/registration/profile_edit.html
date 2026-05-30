@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %} ویرایش پروفایل {% endblock %}
+
+{% block content %}
+<div class="container-py-4">
+    <h1>ویرایش پروفایل</h1>
+
+    {% if messages %}
+      {% for messages in messages %}
+        <div class="alert alert-{{message.tags}}">{{message}}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {%csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">نام</label>
+            {{form.first_name}}
+            {{form.first_name.errors}}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"> نام خانوادگی</label>
+            {{form.last_name}}
+            {{form.last_name.errors}}
+        </div>
+        <div class="mb-3">
+            <label class="form-label">موبایل</label>
+            {{form.phone}}
+            {{form.phone.errors}}
+        </div>
+        <div class="mb-3">
+            <label class="form-label">آدرس</label>
+            {{form.address}}
+            {{form.address.errors}}
+        </div>
+        <button class="btn btn-success" type="submit">ذخیره</button>
+        <a class="btn btn-secondary" href="{% url 'accounts:profile' %}">بازگشت</a>
+
+    </form>
+</div>
+{% endblock %}

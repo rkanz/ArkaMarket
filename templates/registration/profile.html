@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %} اکانت من {% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1> اکانت من</h1>
+
+    <p>نام کاربری: {{ request.user.username }}</p>
+
+    {% if request.user.first_name %}
+        <p>نام: {{ request.user.first_name }}</p>
+    {% endif %}
+
+    {% if request.user.last_name %}
+        <p>نام خانوادگی: {{ request.user.last_name }}</p>
+    {% endif %}
+
+    <p>ایمیل: {{ request.user.email }}</p>
+
+    <hr>
+    {% if profile.phone %}
+    <p>موبایل: {{ profile.phone }}</p>
+    {% endif %}
+    {% if profile.address %}
+    <p>آدرس: {{ profile.address }}</p>
+    {% endif %}
+
+    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary mt-2">
+        ویرایش پروفایل
+    </a>
+</div>
+{% endblock %}

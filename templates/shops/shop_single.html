@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{%load static %}
+
+{% block content%}
+    <!-- Open Content -->
+
+    <section class="bg-light">
+        <div class="container pb-5">
+            <div class="row">
+                <div class="col-lg-5 mt-5">
+                    <div class="card mb-3">
+                        {% if product.gallery.all %}
+                        <img class="card-img img-fluid" src="{{ product.image.url }}" alt="Card image cap" id="product-detail">
+                        {% else %}
+                        <img class="card-img img-fluid" src="{{ product.image.url }}" alt="Card image cap" id="product-detail">
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        <!--Start Controls-->
+                        <div class="col-1 align-self-center">
+                            <a href="#multi-item-example" role="button" data-bs-slide="prev">
+                                <i class="text-dark fas fa-chevron-right"></i>
+                                <span class="sr-only">قبلی</span>
+                            </a>
+                        </div>
+                        <!--End Controls-->
+                        <!--Start Carousel Wrapper-->
+                        <div id="multi-item-example" class="col-10 carousel slide carousel-multi-item " data-bs-ride="carousel">
+                            <!--Start Slides-->
+                            <div class="carousel-inner product-links-wap" role="listbox">
+                                {% with images=product.gallery.all %}
+                                  {% if images %}
+                                    {% for img in images %}
+                                       {% if forloop.counter0|divisibleby:3 %}
+                                <!--First slide-->
+                                <div class="carousel-item {%if forloop.first %}active {% endif %}">
+                                    <div class="row">
+                                        {% endif %}
+                                        <div class="col-4">
+                                            <a href="#">
+                                                <img class="card-img img-fluid" src="{{img.image.url}}" alt="Product Image 1">
+                                            </a>
+                                        </div>
+                                        {% if forloop.counter|divisibleby:3 or forloop.last %}
+                                    </div>
+                                </div>
+                                        {% endif %}
+                                    {% endfor %}
+                               {% endif %}
+                            {% endwith %}
+                            </div>
+                        </div>
+                                                    <!--End Slides-->
+
+                        <!--End Carousel Wrapper-->
+                        <!--Start Controls-->
+                        <div class="col-1 align-self-center">
+                            <a href="#multi-item-example" role="button" data-bs-slide="next">
+                                <i class="text-dark fas fa-chevron-left"></i>
+                                <span class="sr-only">بعدی</span>
+                            </a>
+                        </div>
+                        <!--End Controls-->
+                    </div>
+                </div>
+                <!-- col end -->
+                <div class="col-lg-7 mt-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <h1 class="h2">{{product.name }}</h1>
+                            <p class="h3 py-2" {{product.price}} تومان </p>
+
+                            <!-- امتیاز دهی -->
+                            {% include 'shops/rating.html' with product=product %}
+                            <div>
+                                {% if average_score %}
+                                  <p>
+                                     امتیاز: {{average_score|floatformat:1}}از 5({{rating_count}}رای)
+                                  </p>
+                                {% else %}
+                                <p>هنوز هیچ امتیازی ثبت نشده است </p>
+                                {% endif %}
+                            </div>
+                            <!-- علاقه مندی ها/لایک کردن محصول -->
+                            {% include 'shops/favorite.html' with product=product %}
+
+                            <ul class="list-inline padd-r-0">
+                                <li class="list-inline-item">
+                                    <h6>دسته بندی:</h6>
+                                </li>
+                                <li class="list-inline-item">
+                                     <a href="{% url 'shop:shop_by_category' product.category.slug %}?" class="text-muted"><strong>{{product.category.name}}</strong></a>
+                                </li>
+
+                                    {% if product.brands.exists %}
+                                <li class="list-inline-item">
+                                      <h6>برند:</h6>
+                                </li>
+                                <li class="list-inline-item">
+                                       {% with first_brand=product.brands.first %}
+                                         {% if first_brand %}
+                                            <a href="{% url 'shop:shop_home' %}?brands={{ first_brand.name }}" class="text-muted">
+                                            <strong>{{ first_brand.name }}</strong>
+                                            </a>
+                                         {% endif %}
+                                      {% endwith %}
+                                    {% endif %}
+                                </li>
+
+
+                            </ul>
+
+                            <h6>توضیحات:</h6>
+                            <p>
+                                {{product.description}}
+                            </p>
+                            {% if product.stock_quantity > 0 %}
+                            <ul class="list-inline padd-r-0">
+                                <li class="list-inline-item">
+                                    <h6>رنگ های موجود :</h6>
+                                </li>
+                                <li class="list-inline-item">
+                                {% for color in product.colors.all %}
+                                  {% if color %}
+                                   <li class="list-inline-item"><span class="btn btn-success btn-size">{{color.name}}</span></li>
+                                  {% endif %}
+                                {% endfor %}
+                                </li>
+                            </ul>
+                            {% endif %}
+                            {% if product.stock_quantity > 0 %}
+                            <h4>موجودی:{{product.stock_quantity }}عدد</h4>
+                                {% if product.stock_quantity <= product.minimum_stock %}
+                                <p style="color:red"> فقط {{ product.stock_quantity }} عدد در انبار باقی مانده!</p>
+                                {% endif %}
+                            {% else %}
+                                 <p style="color:red">این کالا فعلا موجود نیست اما می‌توانید زنگوله را بزنید تا به محض موجود شدن، به شما خبر دهیم.</p>
+                                 <button type="submit" class="btn btn-success btn-lg" name="submit"> موجود شد خبرم کنید</button>
+                            {% endif %}
+                            {% if product.stock_quantity > 0 %}
+                            <form method="POST" action="{%url 'cart:add_to_cart' product.slug %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="product-title" value="Activewear">
+                                <div class="row">
+                                    <div class="col-auto">
+                                        <ul class="list-inline pb-3 padd-r-0">
+                                            <li class="list-inline-item">سایز :
+                                                <input type="hidden" name="product-size" id="product-size" value="S">
+                                            </li>
+                                            {% for size in product.sizes.all %}
+                                              {% if size %}
+                                            <li class="list-inline-item"><span class="btn btn-success btn-size">{{size.name}}</span></li>
+                                              {% endif %}
+                                            {% endfor %}
+
+                                        </ul>
+                                    </div>
+                                    <div class="col-auto">
+                                        <ul class="list-inline pb-3 padd-r-0">
+                                            <li class="list-inline-item text-right">
+                                                تعداد
+                                                <input type="hidden" name="quantity" id="product-quantity" value="1">
+                                            </li>
+                                            <li class="list-inline-item"><span class="btn btn-success" id="btn-minus">-</span></li>
+                                            <li class="list-inline-item"><span class="badge bg-secondary" id="var-value">1</span></li>
+                                            <li class="list-inline-item"><span class="btn btn-success" id="btn-plus">+</span></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="row pb-3">
+                                    <div class="col d-grid">
+                                        <button type="submit" class="btn btn-success btn-lg" name="submit" value="buy">خرید</button>
+                                    </div>
+                                    <div class="col d-grid">
+                                        <button type="submit" class="btn btn-success btn-lg" name="submit" value="addtocard">افزودن به سبد</button>
+                                    </div>
+                                </div>
+
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('product-quantity');
+        const display = document.getElementById('var-value');
+        const btnPlus = document.getElementById('btn-plus');
+        const btnMinus = document.getElementById('btn-minus');
+
+        btnPlus.addEventListener('click', function() {
+            let val = parseInt(input.value) + 1;
+            input.value = val;
+            display.innerText = val;
+        });
+
+        btnMinus.addEventListener('click', function() {
+            let val = parseInt(input.value);
+            if (val > 1) {
+                val -= 1;
+                input.value = val;
+                display.innerText = val;
+            }
+        });
+    });
+</script>
+ {{block.super}}
+{% endblock scripts %}
+
+{%endblock content%}

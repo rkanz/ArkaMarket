@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{%load static %}
+{%block content%}
+
+    <!-- Start Banner Hero -->
+    <div id="template-mo-zay-hero-carousel" class="carousel slide" data-bs-ride="carousel">
+        <ol class="carousel-indicators">
+            {% for banner in banners %}
+            <li data-bs-target="#template-mo-zay-hero-carousel"
+                data-bs-slide-to="{{forloop.counter0}}"
+                class="{% if forloop.first %}active{% endif %}"></li>
+            {% endfor %}
+        </ol>
+        <div class="carousel-inner">
+            {% for banner in banners %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                <div class="container">
+                    <div class="row p-5">
+                        <div class="mx-auto col-md-8 col-lg-6 order-lg-last">
+                            <img class="img-fluid" src="{{banner.image.url}}" alt="{{banner.title}}">
+                        </div>
+                        <div class="col-lg-6 mb-0 d-flex align-items-center">
+                            <div class="text-align-left align-self-center">
+                                <h1 class="h1 text-success">{{banner.title}}</h1>
+                                {% if banner.subtitle %}
+                                <h3 class="h2">{{banner.subtitle}}</h3>
+                                {% endif %}
+                                    {% if banner.description %}
+                                     <p> {{banner.description}} </p>
+                                    {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                {% endfor %}
+        </div>
+        <a class="carousel-control-prev text-decoration-none w-auto ps-3" href="#template-mo-zay-hero-carousel" role="button" data-bs-slide="prev">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <a class="carousel-control-next text-decoration-none w-auto pe-3" href="#template-mo-zay-hero-carousel" role="button" data-bs-slide="next">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+    </div>
+    <!-- End Banner Hero -->
+
+
+    <!-- Start Categories of The Month -->
+    <section class="container py-5">
+        <div class="row text-center pt-3">
+            <div class="col-lg-6 m-auto">
+                <h1 class="h1">دسته بندی های ماه</h1>
+                <p>
+                    لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است. چاپگرها و متون بلکه روزنامه و مجله در ستون و سطر.
+                </p>
+            </div>
+        </div>
+        <div class="row mt-5 justify-content-center">
+            {% for category in featured_categories %}
+              {% if category.slug %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                    <a href="{% url 'shop:shop_by_category' category.slug %}">
+                        {% if category.image %}
+                        <img src="{{category.image.url}}" class="rounded-circle img-fluid border" alt="{{category.name}}">
+                        {% endif %}
+                    </a>
+                <h5 class="text-center mt-3 mb-3">{{category.name}}</h5>
+                <p class="text-center"><a class="btn btn-success" href="{% url 'shop:shop_by_category' category.slug %}">برو فروشگاه</a></p>
+            </div>
+              {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    <!-- End Categories of The Month -->
+
+
+    <!-- Start Featured Product -->
+    <section class="bg-light">
+        <div class="container py-5">
+            <div class="row text-center py-3">
+                <div class="col-lg-6 m-auto">
+                    <h1 class="h1">محصول ویژه</h1>
+                    <p>
+                        لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است. چاپگرها و متون بلکه روزنامه و مجله در ستون و سطر.
+                    </p>
+                </div>
+            </div>
+            <div class="row">
+                {% for product in products %}
+                <div class="col-12 col-md-4 mb-4">
+                    <div class="card h-100">
+                        <a href="{% url 'shop:shop_single' product.slug %}">
+                            <img src="{{product.image.url}}" class="card-img-top" alt="...">
+                        </a>
+                        <div class="card-body">
+                            <ul class="list-unstyled d-flex justify-content-between padd-rl-0">
+                                {% if product.rating_count > 0 %}
+                                 {% with rating=product.average_score %}
+                                   {% with full=rating|floatformat:"0" %}
+                                      <div class="stars">
+                                      {# ستاره‌ها #}
+                                      {% for i in "12345" %}
+                                        {% if forloop.counter <= full|add:"0" %}
+                                          <span class="star filled">★</span>
+                                        {% else %}
+                                          <span class="star">☆</span>
+                                        {% endif %}
+                                      {% endfor %}
+                                   <span class="rating-text">
+                                    ({{ product.rating_count }} رای)
+                                   </span>
+                                      </div>
+                                   {% endwith %}
+                                {% endwith %}
+                               {% else %}
+                               <div class="stars">
+                                <span class="rating-text">هنوز هیچ امتیازی ثبت نشده است</span>
+                               </div>
+                               {% endif %}
+                                <li class="text-muted text-right">{{product.price}}تومان</li>
+                            </ul>
+                            <a href="{% url 'shop:shop_single' product.slug %}" class="h2 text-decoration-none text-dark">{{product.name}}</a>
+                            <p class="card-text">
+                                {{product.description}}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    <!-- End Featured Product -->
+{%endblock content%}

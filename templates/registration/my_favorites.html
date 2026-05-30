@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %} {{title}} {% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>{{ title }}</h1>
+
+    {% if products %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for product in products %}
+                <div class="col">
+                    <div class="card h-100">
+                        <a href="{% url 'shop:shop_single' product.slug %}">
+                            <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title"><a href="{% url 'shop:shop_single' product.slug %}">{{ product.name }}</a></h5>
+                            <p class="card-text">
+                                {# قیمت محصول  #}
+                                {{ product.price }} تومان
+                            </p>
+                        </div>
+                        <div class="card-footer text-center">
+                            {# دکمه حذف از علاقه‌مندی #}
+
+                            <form action="{% url 'accounts:toggle_favorite' product.slug %}" method="post" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                    حذف از علاقه‌مندی‌ها
+                                </button>
+                            </form>
+                            {# <button class="btn btn-outline-danger btn-sm toggle-favorite-btn" data-product-slug="{{ product.slug }}">حذف</button> #}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-center mt-5">شما هنوز هیچ محصولی را به لیست علاقه‌مندی‌های خود اضافه نکرده‌اید.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const favoriteButtons = document.querySelectorAll('.toggle-favorite-btn');
+        favoriteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const slug = this.dataset.productSlug;
+                fetch("{% url 'toggle_favorite' 'placeholder_slug' %}".replace('placeholder_slug', slug), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({}), //
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // محصول را از صفحه حذف کن
+                        this.closest('.col').remove();
+
+                        console.log(data.message);
+                    } else {
+                        alert('خطا در حذف محصول!');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
+    });
+</script>
+{% endblock %}

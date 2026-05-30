@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{%load static %}
+{%block content%}
+
+
+    <!-- Start Content -->
+    <div class="container py-5">
+        <div class="row">
+            <div class="col-lg-3">
+                <h1 class="h2 pb-4">دسته بندی</h1>
+                <ul class="list-unstyled templatemo-accordion padd-r-0">
+                    <li class="pb-3">
+                        <a class="collapsed d-flex justify-content-between h3 text-decoration-none" href="#">
+                            جنسیت
+                            <i class="fa fa-fw fa-chevron-circle-down mt-1"></i>
+                        </a>
+                        <ul class="collapse show list-unstyled pl-3">
+                            <li><a class="text-decoration-none" href="{% url 'shop:shop_home' %}?gender=male">مردانه</a></li>
+                            <li><a class="text-decoration-none" href="{% url 'shop:shop_home' %}?gender=female">زنانه</a></li>
+                        </ul>
+                    </li>
+                    <li class="pb-3">
+                        <a class="collapsed d-flex justify-content-between h3 text-decoration-none"
+                           href="#collapseTwo">
+                            برند
+                            <i class="pull-right fa fa-fw fa-chevron-circle-down mt-1"></i>
+                        </a>
+                        <ul id="collapseTwo" class="collapse list-unstyled pl-3">
+                            {% for brand in brands %}
+                            <li><a class="text-decoration-none" href="{% url 'shop:shop_home' %}?brands={{ brand }}">{{ brand }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    <li class="pb-3">
+                        <a class="collapsed d-flex justify-content-between h3 text-decoration-none"
+                           href="#collapseThree">
+                            محصول
+                            <i class="pull-right fa fa-fw fa-chevron-circle-down mt-1"></i>
+                        </a>
+                        <ul id="collapseThree" class="collapse list-unstyled pl-3">
+                            {% for category in categories %}
+                            <li><a class="text-decoration-none" href="{% url 'shop:shop_by_category' category.slug %}">{{ category.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-9">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-inline shop-top-menu pb-3 pt-1 padd-r-0">
+                            <li class="list-inline-item">
+                                <a class="h3 text-dark text-decoration-none mr-3" href="{% url 'shop:shop_home' %}">همه</a>
+                            </li>
+                            <li class="list-inline-item">
+                                <a class="h3 text-dark text-decoration-none mr-3" href="{% url 'shop:shop_home' %}?gender=male">مردانه</a>
+                            </li>
+                            <li class="list-inline-item">
+                                <a class="h3 text-dark text-decoration-none" href="{% url 'shop:shop_home' %}?gender=female">زنانه</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 pb-4">
+                        <form method="get" class="d-flex">
+                            <select name="sort" class="form-control" onchange="this.form.submit()">
+                                <option value=""> مرتب سازی</option>
+                                <option value="newest"{% if selected_sort == 'newest' %}selected{% endif %}> جدیدترین </option>
+                                <option value="price_low"{% if selected_sort == 'price_low' %}selected{% endif %}> ارزانتزین </option>
+                                <option value="oldest"{% if selected_sort == 'oldest' %}selected{% endif %}> قدیمیترین </option>
+                                <option value="price_high"{% if selected_sort == 'price_high' %}selected{% endif %}> گرانترین </option>
+                                <option value="rating"{% if selected_sort == 'rating' %}selected{% endif %}> امتیاز </option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <div class="row">
+                     {% for product in products %}
+                    <div class="col-md-4 col-sm-6 mb-4">
+                        <div class="card mb-4 product-wap rounded-0 h-100">
+                            <div class="card rounded-0">
+                                <img class="card-img-top rounded-0 img-fluid" src="{{ product.image.url }}">
+                                <div class="card-img-overlay rounded-0 product-overlay d-flex align-items-center justify-content-center">
+                                    <ul class="list-unstyled padd-r-0 m-0">
+                                        <li><a class="btn btn-success text-white" href="#"><i class="far fa-heart"></i></a></li>
+                                        <li><a class="btn btn-success text-white mt-2" href="{%url 'shop:shop_single' product.slug %}"><i class="far fa-eye"></i></a></li>
+                                        <li><a class="btn btn-success text-white mt-2" href="#"><i class="fas fa-cart-plus"></i></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <a href="{%url 'shop:shop_single' product.slug %}" class="h3 text-decoration-none">{{product.name}}</a>
+                                <ul class="w-100 list-unstyled d-flex justify-content-between mb-0 padd-r-0">
+                                    {% for size in product.sizes.all %}
+                                      {% if size %}
+                                    <li>{{size.name}}</li>
+                                      {% endif %}
+                                    {% endfor %}
+                                    <li class="pt-2">
+                                        <span class="product-color-dot color-dot-red float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-blue float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-black float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-light float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-green float-left rounded-circle ml-1"></span>
+                                    </li>
+                                </ul>
+                               {% if product.rating_count > 0 %}
+                                 {% with rating=product.average_score %}
+                                   {% with full=rating|floatformat:"0" %}
+                                      <div class="stars">
+                                      {# ستاره‌ها #}
+                                      {% for i in "12345" %}
+                                        {% if forloop.counter <= full|add:"0" %}
+                                          <span class="star filled">★</span>
+                                        {% else %}
+                                          <span class="star">☆</span>
+                                        {% endif %}
+                                      {% endfor %}
+                                   <span class="rating-text">
+                                    ({{ product.rating_count }} رای)
+                                   </span>
+                                    </div>
+                                   {% endwith %}
+                                {% endwith %}
+                              {% else %}
+                               <div class="stars">
+                                <span class="rating-text">بدون امتیاز</span>
+                               </div>
+                               {% endif %}
+                                <p class="text-center mb-0">{{product.price}}تومان</p>
+                            </div>
+                        </div>
+                    </div>
+                     {% endfor %}
+                </div>
+            </div>
+                <div class="row">
+                    <div class="col-12">
+                        <nav aria-label="Page navigation">
+                        {% if products.has_other_pages %}
+                    <ul class="pagination pagination-lg justify-content-end">
+                          {% if products.has_previous %}
+                        <li class="page-item ">
+                            <a class="page-link active rounded-0 mr-3 shadow-sm border-top-0 border-left-0 text-dark"
+                               href="?page={{ products.previous_page_number }}
+                               {% if selected_gender %}&gender={{ selected_gender }}{% endif %}
+                               {% if selected_category.slug %}&category={{ selected_category.slug }}{% endif %}
+                               {% if selected_brand %}&brands={{ selected_brand }}{% endif %}
+                               {% if selected_sort %}&sort={{ selected_sort }}{% endif %}"> قبلی </a>
+                        </li>
+                          {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link rounded-0 mr-3 shadow-sm border-top-0 border-left-0" href="#" tabindex="-1">قبلی</a>
+                        </li>
+                          {% endif %}
+                          {% for num in products.paginator.page_range %}
+                            {% if products.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link rounded-0 shadow-sm border-top-0 border-left-0">{{num}}</span>
+                            {% else %}
+                        <li class="page-item">
+                            <a class="page-link rounded-0 shadow-sm border-top-0 border-left-0"href="?page={{num}}{% if selected_gender %}&gender={{ selected_gender }}{% endif %}
+                               {% if selected_category.slug %}&category={{ selected_category.slug }}{% endif %}
+                               {% if selected_brand %}&brands={{ selected_brand }}{% endif %}
+                               {% if selected_sort %}&sort={{ selected_sort }}{% endif %}">{{num}}</a>
+                        </li>
+                            {% endif %}
+                          {% endfor %}
+                          {% if products.has_next %}
+                        <li class="page-item">
+                            <a class="page-link rounded-0 shadow-sm border-top-0 border-left-0 text-dark" href="?page={{products.next_page_number}}{% if selected_gender %}&gender={{ selected_gender }}{% endif %}
+                               {% if selected_category.slug %}&category={{ selected_category.slug }}{% endif %}
+                               {% if selected_brand %}&brands={{ selected_brand }}{% endif %}
+                               {% if selected_sort %}&sort={{ selected_sort }}{% endif %}">بعدی</a>
+                        </li>
+                          {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link rounded-0 shadow-sm border-top-0 border-left-0" href="#" tabindex="-1">بعدی</a>
+                        </li>
+                          {% endif %}
+                    </ul>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End Content -->
+
+    <!-- Start Brands -->
+    <section class="bg-light py-5">
+        <div class="container my-4">
+            <div class="row text-center py-3">
+                <div class="col-lg-6 m-auto">
+                    <h1 class="h1">برندهای ما</h1>
+                    <p>
+                        لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است.
+                    </p>
+                </div>
+                <div class="col-lg-9 m-auto tempaltemo-carousel">
+                    <div class="row d-flex flex-row">
+                        <!--Controls-->
+                        <div class="col-1 align-self-center">
+                            <a class="h1" href="#multi-item-example" role="button" data-bs-slide="prev">
+                                <i class="text-light fas fa-chevron-right"></i>
+                            </a>
+                        </div>
+                        <!--End Controls-->
+
+                        <!--Carousel Wrapper-->
+                        <div class="col">
+                            <div class="carousel slide carousel-multi-item pt-2 pt-md-0" id="multi-item-example" data-bs-ride="carousel">
+                                <!--Slides-->
+                                <div class="carousel-inner product-links-wap" role="listbox">
+                                    <!--First slide-->
+                                    {% for group in all_brands %}
+                                    <div class="carousel-item {% if forloop.first %}active {% endif %}">
+                                        <div class="row">
+                                            {% for brand in group %}
+                                            <div class="col-3 p-md-5">
+                                                <a href="#">
+                                                     {% if brand.image %}
+                                                    <img class="img-fluid brand-img" src="{{brand.image.url}}" alt="Brand Logo"></a>
+                                                     {% endif %}
+                                            </div>
+                                           {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!--Controls-->
+                        <div class="col-1 align-self-center">
+                            <a class="h1" href="#multi-item-example" role="button" data-bs-slide="next">
+                                <i class="text-dark fas fa-chevron-left"></i>
+                            </a>
+                        </div>
+                        <!--End Controls-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!--End Brands-->
+{%endblock content%}
