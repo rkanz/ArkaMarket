@@ -76,16 +76,16 @@ Main entities used in the project:
 ![Shop Page](screenshots/shop.png)
 
 ### Product Details
-![Product Details](screenshots/product-detail.png)
+![Product Details](screenshots/product_detail.png)
 
 ### Cart
 ![Cart](screenshots/cart.png)
 
 ### Favorites
-![Favorites](screenshots/favorites.png)
+![Favorites](screenshots/favorite.png)
 
 ### Profile
-![Profile](screenshots/profile.png)
+![Profile](screenshots/user_profile.png)
 
 
 
