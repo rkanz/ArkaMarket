@@ -1,0 +1,29 @@
+/static
+__pycache__/
+*.py[cod]
+static/
+staticfiles/
+.env
+static
+venv/
+env/
+.venv
+*.pyc
+db.sqlite3
+venv
+media/
+.env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vscode/
+.idea/
+
+
+# OS files
+.DS_Store
+Thumbs.db

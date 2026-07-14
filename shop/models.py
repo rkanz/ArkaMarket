@@ -1,8 +1,10 @@
+from platform import processor
 
 from django.core.validators import MinValueValidator,MaxValueValidator
 from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth.models import User
+from django.utils import timezone
 # Create your models here.
 #مدل دسته بندی
 class Category(models.Model):
@@ -63,6 +65,15 @@ class Product(models.Model):
     ]
     gender=models.CharField(max_length=10,choices=GENDER_CHOICES,default='male')
 
+    @property
+    def discounted_price(self):
+        if self.discount_percentage>0:
+            discount_amount=self.price*self.discount_percentage/100
+            return self.price-discount_amount
+        else:
+            return self.price
+
+
     def __str__(self):
         return self.name
     def save(self,*args,**kwargs):
@@ -83,6 +94,7 @@ class Rating(models.Model):
     score=models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1),MaxValueValidator(5)]
     )
+    created_at=models.DateTimeField(auto_now_add=True)
     class Meta:
         unique_together=('user','product')
     def __str__(self):
