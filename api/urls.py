@@ -27,4 +27,12 @@ urlpatterns=[
 
     path('wishlist/',views.wishlist_view,name='wishlist'),
     path('wishlist/<int:product_id>/',views.wishlist_view,name='wishlist-detail'),
+
+    path('cart/',views.cart_view,name='cart-view'),
+    path('cart/items/<int:item_id>/',views.cart_item_view,name='cart-items'),
+    path('cart/clear/',views.cart_clear_view,name='cart-clear'),
+
+    path('orders/',views.order_view,name='orders'),
+    path('orders/<int:order_id>/',views.order_detail_view,name='order-detail'),
+
 ]

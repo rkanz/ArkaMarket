@@ -1,6 +1,8 @@
 from shop.models import (Product,Brand,Category,ProductImage,Color,Size,Rating,
                          ContactMessage,Banner,User)
 from accounts.models import Profile
+from order.models import Order,OrderItem
+from cart.models import Cart,CartItem
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -149,3 +151,61 @@ class LogOutSerializer(serializers.Serializer):
 
 class WishlistAddSerializer(serializers.Serializer):
     product_id=serializers.IntegerField()
+
+class CartAddSerializer(serializers.Serializer):
+    product_id=serializers.IntegerField()
+    quantity=serializers.IntegerField(default=1,min_value=1)
+    def validate(self,attrs):
+        product=Product.objects.get(id=attrs["product_id"])
+        if attrs["quantity"]>product.stock_quantity:
+            raise serializers.ValidationError(
+                {
+                    "quantity":f"Only {product.stock_quantity} items are available."
+                }
+            )
+        return attrs
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product=ProductListSerializer(read_only=True)
+    total_price=serializers.ReadOnlyField()
+    class Meta:
+        model=CartItem
+        fields=['id','product','quantity','total_price']
+
+class CartSerializer(serializers.ModelSerializer):
+    items=CartItemSerializer(many=True,read_only=True)
+    grand_total=serializers.SerializerMethodField()
+    total_items=serializers.SerializerMethodField()
+    class Meta:
+        model=Cart
+        fields=['id','items','total_items','grand_total','updated_at','created_at']
+
+    def get_total_items(self,obj):
+        return sum(item.quantity for item in obj.items.all())
+    def get_grand_total(self,obj):
+        return sum(item.total_price for item in obj.items.all())
+
+class CartUpdateSerializer(serializers.Serializer):
+    quantity=serializers.IntegerField(min_value=1)
+
+class OrderListSerializer(serializers.ModelSerializer):
+    total_price=serializers.SerializerMethodField()
+    class Meta:
+        model=Order
+        fields=['id','created_at','status','total_price']
+    def get_total_price(self,obj):
+        return sum(item.total_price for item in obj.items.all())
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product = ProductListSerializer(read_only=True)
+    class Meta:
+        model=OrderItem
+        fields=['id','order','product','quantity','price','total_price']
+class OrderDetailSerializer(serializers.ModelSerializer):
+    items=OrderItemSerializer(many=True,read_only=True)
+    total_price = serializers.SerializerMethodField()
+    class Meta:
+        model=Order
+        fields=['id','status','created_at','phone','address','items','total_price']
+    def get_total_price(self,obj):
+        return sum(item.total_price for item in obj.items.all())

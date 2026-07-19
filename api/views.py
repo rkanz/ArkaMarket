@@ -1,12 +1,16 @@
 from http.client import responses
-
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics,status
 from .serializers import (ProductListSerializer, CategorySerializer, ProductDetailSerializer, RatingSerializer,
-                          ContactMessageSerializer,BannerSerializer,RegisterSerializer,ProfileSerializer,
-                          ChangePasswordSerializer,LogOutSerializer,WishlistAddSerializer)
+                          ContactMessageSerializer, BannerSerializer, RegisterSerializer, ProfileSerializer,
+                          ChangePasswordSerializer, LogOutSerializer, WishlistAddSerializer, CartSerializer,
+                          CartItemSerializer, CartAddSerializer, CartUpdateSerializer,OrderListSerializer,
+                          OrderDetailSerializer)
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from shop.models import Product,Category,Rating,Banner
+from cart.models import Cart,CartItem
+from order.models import Order,OrderItem
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter,OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -206,5 +210,143 @@ class WishlistAPIView(APIView):
         profile.favorites_products.remove(product)
         return Response(status=status.HTTP_204_NO_CONTENT)
 wishlist_view=WishlistAPIView.as_view()
+
+class CartAPIVIEW(APIView):
+    permission_classes=[IsAuthenticated]
+    def get(self,request):
+        cart,created=Cart.objects.get_or_create(user=request.user)
+        serializer=CartSerializer(cart)
+        return Response(serializer.data)
+
+    def post(self,request):
+        serializer = CartAddSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = get_object_or_404(Product,id=serializer.validated_data["product_id"])
+        quantity = serializer.validated_data["quantity"]
+
+        cart, created = Cart.objects.get_or_create(user=request.user)
+        cart_item,item_created = CartItem.objects.get_or_create(cart=cart,product=product)
+        if item_created:
+            new_quantity = quantity
+        else:
+            new_quantity = cart_item.quantity + quantity
+
+        if new_quantity > product.stock_quantity:
+            return Response(
+                {
+                    "detail": f"Only {product.stock_quantity} items are available."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        cart_item.quantity = new_quantity
+        cart_item.save()
+        detail = (
+            "Product added to cart."
+            if item_created
+            else "Cart updated.")
+
+        return Response(
+            {
+                "detail": detail,
+                "cart": CartSerializer(cart).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+cart_view=CartAPIVIEW.as_view()
+
+class CartItemAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self,request,item_id):
+        serializer = CartUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        cart=get_object_or_404(Cart,user=request.user)
+        cart_item=get_object_or_404(CartItem,id=item_id,cart=cart)
+        cart_item.quantity = serializer.validated_data["quantity"]
+        if serializer.validated_data["quantity"]>cart_item.product.stock_quantity:
+            return Response({
+                "detail":f"Only {cart_item.product.stock_quantity} items are available."
+            },status=status.HTTP_400_BAD_REQUEST
+            )
+        cart_item.save()
+        serializer=CartSerializer(cart)
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK
+        )
+
+
+    def delete(self, request, item_id):
+        cart = get_object_or_404(Cart, user=request.user)
+        cart_item = get_object_or_404(CartItem, id=item_id, cart=cart)
+        cart_item.delete()
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
+        )
+cart_item_view=CartItemAPIView.as_view()
+
+
+
+
+
+class ClearCartAPIView(APIView):
+    permission_classes=[IsAuthenticated]
+    def delete(self,request):
+        cart = get_object_or_404(Cart, user=request.user)
+        cart.items.all().delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+cart_clear_view=ClearCartAPIView.as_view()
+
+class OrderAPIView(generics.ListAPIView):
+    permission_classes=[IsAuthenticated]
+    serializer_class=OrderListSerializer
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
+
+    @transaction.atomic
+    def post(self, request):
+        cart = get_object_or_404(Cart, user=request.user)
+        cart_items = cart.items.all()
+        if not cart_items.exists():
+            return Response(
+                {
+                    "detail": "Cart is empty"
+                }, status=status.HTTP_400_BAD_REQUEST,
+            )
+        for items in cart_items:
+            if items.quantity > items.product.stock_quantity:
+                return Response(
+                    {
+                        "detail": f"Only {items.product.stock_quantity} items of {items.product.name} are available."
+                    }
+                )
+        order = Order.objects.create(
+            user=request.user,
+            address=request.user.profile.address,
+            phone=request.user.profile.phone
+        )
+        for items in cart_items:
+            OrderItem.create(order=order, product=items.product, quantity=items.quantity,
+                             pirice=items.product.discounted_price)
+            items.product.stock_quantity -= items.quantity
+            items.product.save(update_fields=["stock_quantity"])
+        cart.items.delete()
+        serializer = OrderDetailSerializer(order)
+        return Response(serializer.data,
+                        status=status.HTTP_201_CREATED
+                        )
+order_view=OrderAPIView.as_view()
+
+class OrderDetailAPIView(generics.RetrieveAPIView):
+    permission_classes=[IsAuthenticated]
+    serializer_class=OrderDetailSerializer
+    lookup_field = "id"
+    lookup_url_kwarg = "order_id"
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
+order_detail_view=OrderDetailAPIView.as_view()
+
+
+
 
 
