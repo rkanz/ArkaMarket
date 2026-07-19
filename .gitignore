@@ -1,18 +1,23 @@
+
+#Static
+static
 /static
-__pycache__/
-*.py[cod]
 static/
 staticfiles/
-.env
-static
-venv/
+
+#Environment
 env/
-.venv
-*.pyc
-db.sqlite3
-venv
-media/
 .env/
+.env
+
+#PYTHON
+*.pyc
+__pycache__/
+*.py[cod]
+
+#Media
+media/
+
 
 # Testing
 .pytest_cache/
@@ -27,3 +32,11 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+
+#DJANGO
+db.sqlite3
+*.log
+
+#Virtual Environment
+venv/
+.venv/
