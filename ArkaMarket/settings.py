@@ -165,3 +165,27 @@ SIMPLE_JWT={
     "BLACKLIST_AFTER_ROTATION" : True
 
 }
+
+CELERY_BROKER_URL="redis://redis:6379/0"
+
+CELERY_ACCEPT_CONTENT=["json"]
+
+CELERY_TASK_SERIALIZER="json"
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+DEFAULT_FROM_EMAIL = "noreply@arkamarket.com"
+
+CACHES={
+    "default":{
+        "BACKEND":
+    "django_redis.cache.RedisCache",
+        "LOCATION":
+    "redis://redis:6379/1",
+        "OPTIONS":{
+            "CLIENT_CLASS":
+                "django_redis.client.DefaultClient"
+        },
+        "TIMEOUT":300
+    }
+}

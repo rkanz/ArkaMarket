@@ -11,18 +11,22 @@ class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model=Brand
         fields=['id','name']
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model=Category
-        fields=['id','name','slug']
+        fields=['id','name','slug','is_featured']
+
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = ['id', 'image', 'alt_text']
+
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model=Color
         fields=['id','name']
+
 class SizeSerializer(serializers.ModelSerializer):
     class Meta:
         model=Size
@@ -53,7 +57,6 @@ class ProductListSerializer(serializers.ModelSerializer):
             'is_featured',
             'average_rating',
             'ratings_count'
-
         ]
 class ProductDetailSerializer(serializers.ModelSerializer):
     brands=BrandSerializer(many=True,read_only=True)
@@ -90,6 +93,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'average_rating',
             'ratings_count',
         ]
+
 class RatingSerializer(serializers.ModelSerializer):
     username=serializers.CharField(source='user.username',read_only=True)
     class Meta:
@@ -101,10 +105,17 @@ class ContactMessageSerializer(serializers.ModelSerializer):
         model=ContactMessage
         fields=['first_last_name','subject','email','message']
 
+
 class BannerSerializer(serializers.ModelSerializer):
     class Meta:
         model=Banner
-        fields=['id','title','description','image','subtitle']
+        fields=['id','order','subtitle','title','description','image']
+
+class HomeSerializer(serializers.Serializer):
+    banners=BannerSerializer(many=True)
+    featured_products=ProductListSerializer(many=True)
+    featured_categories=CategorySerializer(many=True)
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password1=serializers.CharField(write_only=True,required=True,min_length=8)
@@ -201,6 +212,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model=OrderItem
         fields=['id','order','product','quantity','price','total_price']
+
 class OrderDetailSerializer(serializers.ModelSerializer):
     items=OrderItemSerializer(many=True,read_only=True)
     total_price = serializers.SerializerMethodField()

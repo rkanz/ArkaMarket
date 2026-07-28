@@ -1,11 +1,10 @@
-from http.client import responses
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics,status
 from .serializers import (ProductListSerializer, CategorySerializer, ProductDetailSerializer, RatingSerializer,
-                          ContactMessageSerializer, BannerSerializer, RegisterSerializer, ProfileSerializer,
+                          ContactMessageSerializer,HomeSerializer, RegisterSerializer, ProfileSerializer,
                           ChangePasswordSerializer, LogOutSerializer, WishlistAddSerializer, CartSerializer,
-                          CartItemSerializer, CartAddSerializer, CartUpdateSerializer,OrderListSerializer,
+                          CartAddSerializer, CartUpdateSerializer,OrderListSerializer,
                           OrderDetailSerializer)
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from shop.models import Product,Category,Rating,Banner
@@ -21,10 +20,13 @@ from rest_framework.views import APIView
 from .filters import ProductFilter
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from accounts.tasks import send_welcome_email
+from order.tasks import send_order_email
+from django.core.cache import cache
 
 
-# Create your views here.
 class ProductListAPIView(generics.ListAPIView):
+
     queryset=Product.objects.select_related('category').prefetch_related('brands').annotate(
         average_rating=Avg('ratings__score'),
         ratings_count=Count('ratings')
@@ -36,6 +38,17 @@ class ProductListAPIView(generics.ListAPIView):
     filterset_class=ProductFilter
     ordering_fields=['price','created_at','is_featured','is_available','average_rating','ratings_count']
     ordering=['-created_at']
+    def list(self,request,*args,**kwargs):
+        cache_key = f"products:{request.get_full_path()}"
+        cached_data=cache.get(cache_key)
+        if cached_data is not None:
+            print("Response From Redis Cache")
+            return Response(cached_data)
+        print("Response From Database")
+        queryset=self.filter_queryset(self.get_queryset())
+        serializer=self.get_serializer(queryset,many=True)
+        cache.set(cache_key,serializer.data,timeout=300)
+        return Response(serializer.data)
 
 product_list_view=ProductListAPIView.as_view()
 
@@ -51,6 +64,17 @@ product_detail_view = ProductDetailAPIView.as_view()
 class CategoryListAPIView(generics.ListAPIView):
     queryset=Category.objects.filter(is_active=True)
     serializer_class=CategorySerializer
+    def list(self,request,*args,**kwargs):
+        cache_key='categories:list'
+        cached_data=cache.get(cache_key)
+        if cached_data is not None:
+            print("Response From Redis Cache")
+            return Response(cached_data)
+        print("Response From Database")
+        queryset=self.filter_queryset(self.get_queryset())
+        serializer=self.get_serializer(queryset,many=True)
+        cache.set(cache_key,serializer.data,timeout=300)
+        return Response(serializer.data)
 category_list_view=CategoryListAPIView.as_view()
 
 
@@ -107,14 +131,34 @@ class ContactMessageAPIView(generics.CreateAPIView):
 
 contact_message_view=ContactMessageAPIView.as_view()
 
-class BannerHomeAPIView(generics.ListAPIView):
-    serializer_class=BannerSerializer
-    queryset=Banner.objects.filter(is_active=True).order_by('order')[:3]
-banner_home_view=BannerHomeAPIView.as_view()
+class HomeAPIView(APIView):
+
+    def get(self,request):
+        cache_key = "home:index"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            print("Response From Redis Cache")
+            return Response(cached_data)
+        print("Response From Database")
+        featured_products=Product.objects.filter(is_featured=True,is_available=True).select_related(
+            "category").prefetch_related("brands")[:3]
+        featured_categories=Category.objects.filter(is_featured=True,is_active=True)[:3]
+        banners=Banner.objects.filter(is_active=True).order_by('order')[:3]
+        data={"banners":banners,"featured_products":featured_products,
+              "featured_categories":featured_categories}
+        serializer = HomeSerializer(data)
+        cache.set(cache_key,serializer.data,timeout=300,)
+        return Response(serializer.data)
+
+home_view=HomeAPIView.as_view()
 
 class RegisterAPIView(generics.CreateAPIView):
     serializer_class=RegisterSerializer
     permission_classes=[AllowAny]
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        send_welcome_email.delay(user.pk)
 auth_register_view=RegisterAPIView.as_view()
 
 class ProfileAPIView(generics.RetrieveUpdateAPIView):
@@ -286,9 +330,6 @@ class CartItemAPIView(APIView):
 cart_item_view=CartItemAPIView.as_view()
 
 
-
-
-
 class ClearCartAPIView(APIView):
     permission_classes=[IsAuthenticated]
     def delete(self,request):
@@ -297,7 +338,7 @@ class ClearCartAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 cart_clear_view=ClearCartAPIView.as_view()
 
-class OrderAPIView(generics.ListAPIView):
+class OrderAPIView(generics.ListCreateAPIView):
     permission_classes=[IsAuthenticated]
     serializer_class=OrderListSerializer
     def get_queryset(self):
@@ -326,15 +367,17 @@ class OrderAPIView(generics.ListAPIView):
             phone=request.user.profile.phone
         )
         for items in cart_items:
-            OrderItem.create(order=order, product=items.product, quantity=items.quantity,
-                             pirice=items.product.discounted_price)
+            OrderItem.objects.create(order=order, product=items.product, quantity=items.quantity,
+                             price=items.product.discounted_price)
             items.product.stock_quantity -= items.quantity
             items.product.save(update_fields=["stock_quantity"])
-        cart.items.delete()
+        cart_items.delete()
+        send_order_email.delay(order.id)
         serializer = OrderDetailSerializer(order)
         return Response(serializer.data,
                         status=status.HTTP_201_CREATED
                         )
+
 order_view=OrderAPIView.as_view()
 
 class OrderDetailAPIView(generics.RetrieveAPIView):
@@ -345,8 +388,3 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
 order_detail_view=OrderDetailAPIView.as_view()
-
-
-
-
-

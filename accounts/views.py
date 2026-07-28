@@ -10,12 +10,19 @@ from .models import Profile
 from shop.models import Product
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-
+from .tasks import send_welcome_email
 # Create your views here.
 class RegisterView(CreateView):
     form_class=RegisterForm
     template_name="registration/register.html"
     success_url=reverse_lazy("login")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+
+        send_welcome_email.delay(self.object.pk)
+
+        return response
 
 def login_view(request):
     if request.method == "POST":

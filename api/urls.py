@@ -15,7 +15,7 @@ urlpatterns=[
 
     path('contact/',views.contact_message_view,name='contact-message'),
 
-    path('banners/',views.banner_home_view,name='banner-home'),
+    path('home/',views.home_view,name='home'),
 
     path('token/',TokenObtainPairView.as_view(),name='token_obtain_pair'),
     path('token/refresh/',TokenRefreshView.as_view(),name='token_refresh'),

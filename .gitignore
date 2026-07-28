@@ -1,42 +1,45 @@
-
-#Static
-static
-/static
+# Static
 static/
 staticfiles/
 
-#Environment
-env/
-.env/
-.env
-
-#PYTHON
-*.pyc
-__pycache__/
-*.py[cod]
-
-#Media
+# Media
 media/
 
+# Environment
+.env
+.env/
+env/
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Django
+db.sqlite3
+*.log
+
+# Celery
+celerybeat-schedule*
 
 # Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 
-# IDEs
+# Type checking & linting
+.mypy_cache/
+.ruff_cache/
+.pyright/
+
+# IDE
 .vscode/
 .idea/
 
-
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-
-#DJANGO
-db.sqlite3
-*.log
-
-#Virtual Environment
-venv/
-.venv/
