@@ -229,7 +229,7 @@ GET     /api/orders/<order_id>/
 
 ```http
 GET     /api/categories/
-GET     /api/banners/
+GET     /api/home/
 
 POST    /api/contact/
 ```
