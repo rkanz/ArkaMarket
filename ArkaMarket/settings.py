@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -141,7 +142,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT=os.path.join(BASE_DIR,'static')
 STATICFILES_DIRS=[
-os.path.join(BASE_DIR,'ArkaMarket/static')
+os.path.join(BASE_DIR,'/static/')
 ]
 #Media folder
 MEDIA_ROOT=os.path.join(BASE_DIR,'media')
@@ -156,7 +157,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
+    'DEFAULT_SCHEMA_CLASS':'drf_spectacular.openapi.AutoSchema',
 }
 SIMPLE_JWT={
     'ACCESS_TOKEN_LIFETIME':timedelta(minutes=15),
@@ -188,4 +190,24 @@ CACHES={
         },
         "TIMEOUT":300
     }
+}
+
+SPECTACULAR_SETTINGS={
+    "TITLE":"ArkaMarket API",
+    "DESCRIPTION":"REST API for the ArkaMarket e-commerce platform.",
+    "VERSION":"1.0.0",
+    "SERVE_INCLUDE_SCHEMA":False,
+    "COMPONENTS":{
+        "securitySchemes":{
+            "BearerAuth":{
+                "type":"http",
+                "scheme":"bearer",
+                "bearerFormat":"JWT",
+            }
+        }
+    }, "SECURITY":[
+        {
+            "BearerAuth":[]
+        }
+    ],
 }

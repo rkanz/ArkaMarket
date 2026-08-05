@@ -20,5 +20,5 @@ class CartItem(models.Model):
             )
         ]
     @property
-    def total_price(self):
+    def total_price(self)->float:
         return self.quantity * self.product.discounted_price

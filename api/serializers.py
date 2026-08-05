@@ -191,9 +191,9 @@ class CartSerializer(serializers.ModelSerializer):
         model=Cart
         fields=['id','items','total_items','grand_total','updated_at','created_at']
 
-    def get_total_items(self,obj):
+    def get_total_items(self,obj)-> int:
         return sum(item.quantity for item in obj.items.all())
-    def get_grand_total(self,obj):
+    def get_grand_total(self,obj)-> float:
         return sum(item.total_price for item in obj.items.all())
 
 class CartUpdateSerializer(serializers.Serializer):
@@ -204,7 +204,7 @@ class OrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model=Order
         fields=['id','created_at','status','total_price']
-    def get_total_price(self,obj):
+    def get_total_price(self,obj)->float:
         return sum(item.total_price for item in obj.items.all())
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -219,5 +219,5 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model=Order
         fields=['id','status','created_at','phone','address','items','total_price']
-    def get_total_price(self,obj):
+    def get_total_price(self,obj)->float:
         return sum(item.total_price for item in obj.items.all())

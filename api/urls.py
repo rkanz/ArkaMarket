@@ -1,8 +1,11 @@
 from django.urls import path,include
 from . import views
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView)
+from rest_framework_simplejwt.views import TokenRefreshView
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView )
+
 
 urlpatterns=[
     path('products/',views.product_list_view,name='product-list'),
@@ -17,7 +20,7 @@ urlpatterns=[
 
     path('home/',views.home_view,name='home'),
 
-    path('token/',TokenObtainPairView.as_view(),name='token_obtain_pair'),
+    path('token/',views.login_view,name='token-obtain-pair'),
     path('token/refresh/',TokenRefreshView.as_view(),name='token_refresh'),
 
     path('auth/register/',views.auth_register_view,name='auth-register'),
@@ -35,4 +38,8 @@ urlpatterns=[
     path('orders/',views.order_view,name='orders'),
     path('orders/<int:order_id>/',views.order_detail_view,name='order-detail'),
 
+
+    path('schema/',SpectacularAPIView.as_view(),name='schema'),
+    path('schema/swagger/',SpectacularSwaggerView.as_view(url_name='schema'),name='swagger-url'),
+    path('schema/redoc/',SpectacularRedocView.as_view(url_name='schema'),name='redoc'),
 ]

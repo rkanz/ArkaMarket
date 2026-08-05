@@ -23,10 +23,72 @@ from rest_framework_simplejwt.exceptions import TokenError
 from accounts.tasks import send_welcome_email
 from order.tasks import send_order_email
 from django.core.cache import cache
+from drf_spectacular.utils import (extend_schema,OpenApiResponse,OpenApiTypes,
+                                   OpenApiParameter,OpenApiExample)
+from rest_framework_simplejwt.views import TokenObtainPairView
 
+
+@extend_schema(
+    summary="List Products",
+    description="""
+    Return a paginated list of available products.
+    Supports filtering,searching and ordering.
+    Responses are cached with Redis.
+    """,tags=["Products"],
+    responses={
+        200:ProductListSerializer(many=True),
+    },parameters=[
+        OpenApiParameter(
+            name="search",
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Search products by name,slug,category,brand or description.",
+        ),OpenApiParameter(
+            name='ordering',
+            type=OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            description="Order results by price,created_at,is_featured,is_available,average_rating or ratings_count"
+            "Prefix with '-' for descending order"
+        ),OpenApiParameter(
+            name='min_price',
+            type=OpenApiTypes.NUMBER,
+            location=OpenApiParameter.QUERY,
+            description="Filter products with a price greater than or equal to this value.",
+        ),OpenApiParameter(
+            name='max_price',
+            type=OpenApiTypes.NUMBER,
+            location=OpenApiParameter.QUERY,
+            description="Filter products with a price less than or equal to this value.",
+        ),OpenApiParameter(
+            name='is_discounted',
+            type=OpenApiTypes.BOOL,
+            location=OpenApiParameter.QUERY,
+            description="Filter discounted products.",
+        ),OpenApiParameter(
+            name='category',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="Filter products by category ID."
+        ),OpenApiParameter(
+            name='brands',
+            type=OpenApiTypes.INT,
+            location=OpenApiParameter.QUERY,
+            description="Filter products by brand ID."
+        ),OpenApiParameter(
+            name='is_featured',
+            type=OpenApiTypes.BOOL,
+            location=OpenApiParameter.QUERY,
+            description="Filter featured products."
+        ),OpenApiParameter(
+            name='is_available',
+            type=OpenApiTypes.BOOL,
+            location=OpenApiParameter.QUERY,
+            description="Filter available products."
+        )
+    ]
+)
 
 class ProductListAPIView(generics.ListAPIView):
-
     queryset=Product.objects.select_related('category').prefetch_related('brands').annotate(
         average_rating=Avg('ratings__score'),
         ratings_count=Count('ratings')
@@ -46,12 +108,25 @@ class ProductListAPIView(generics.ListAPIView):
             return Response(cached_data)
         print("Response From Database")
         queryset=self.filter_queryset(self.get_queryset())
+        page=self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            response=self.get_paginated_response(serializer.data)
+            cache.set(cache_key,response.data,timeout=300)
+            return response
         serializer=self.get_serializer(queryset,many=True)
-        cache.set(cache_key,serializer.data,timeout=300)
+        cache.set(cache_key, serializer.data, timeout=300)
         return Response(serializer.data)
 
 product_list_view=ProductListAPIView.as_view()
 
+@extend_schema(
+    summary="Product Details",
+    description="""
+    Returns the detailed information about the specified product .
+    Includes category,brand,ratings,available colors and sizes.
+    """,tags=["Products"]
+)
 class ProductDetailAPIView(generics.RetrieveAPIView):
     queryset=Product.objects.select_related('category').prefetch_related('brands','gallery','sizes','colors').annotate(average_rating=Avg('ratings__score'),
         ratings_count=Count('ratings')).all()
@@ -60,7 +135,13 @@ class ProductDetailAPIView(generics.RetrieveAPIView):
 
 product_detail_view = ProductDetailAPIView.as_view()
 
-
+@extend_schema(
+    summary="List Categories",
+    description="""
+    Returns a list of available categories.
+    Responses are cached with Redis.
+    """,tags=["Categories"]
+)
 class CategoryListAPIView(generics.ListAPIView):
     queryset=Category.objects.filter(is_active=True)
     serializer_class=CategorySerializer
@@ -77,7 +158,15 @@ class CategoryListAPIView(generics.ListAPIView):
         return Response(serializer.data)
 category_list_view=CategoryListAPIView.as_view()
 
+@extend_schema(
+    summary="Submit Product Rating",
+    description="""
+    Creates a new rating for the specified product.
 
+    If the authenticated user has already rated the product,
+    the existing rating will be updated instead.
+    """,tags=["Ratings"]
+)
 class RatingListCreateAPIView(generics.ListCreateAPIView):
     serializer_class=RatingSerializer
     def get_queryset(self):
@@ -99,6 +188,17 @@ class RatingListCreateAPIView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user,product=product)
 product_rating_view=RatingListCreateAPIView.as_view()
 
+@extend_schema(
+    summary="Retrieve User Rating",
+    description="""
+    Creates a new rating for the specified product.
+
+    If the user has already rated the product,
+    the existing rating is updated instead.
+
+    Authentication is required. """,
+    tags=["Ratings"],
+)
 class MyRatingAPIView(generics.RetrieveUpdateAPIView):
     permission_classes=[IsAuthenticated]
     serializer_class=RatingSerializer
@@ -109,7 +209,15 @@ class MyRatingAPIView(generics.RetrieveUpdateAPIView):
             return obj
 my_rating_view=MyRatingAPIView.as_view()
 
-
+@extend_schema(
+    summary="Product Rating Summary",
+    description="""
+    Returns the average rating and total number of ratings for a product.
+    """,tags=["Rating"],
+    responses={
+        200:RatingSerializer
+    }
+)
 class RatingSummaryAPIView(APIView):
     def get(self,request,*args,**kwargs):
         slug=self.kwargs['slug']
@@ -123,7 +231,11 @@ class RatingSummaryAPIView(APIView):
         return Response(response)
 ratings_summary_view=RatingSummaryAPIView.as_view()
 
-
+@extend_schema(
+    summary="Send Contact Message",
+    description="Send Message to the the site administrator ,Authentication is required",
+    tags=["Contact"]
+)
 class ContactMessageAPIView(generics.CreateAPIView):
     serializer_class=ContactMessageSerializer
     permission_classes=[IsAuthenticated]
@@ -131,8 +243,18 @@ class ContactMessageAPIView(generics.CreateAPIView):
 
 contact_message_view=ContactMessageAPIView.as_view()
 
+@extend_schema(
+    summary="Home Page Data",
+    description="""
+    Returns featured products, featured categories and active banners
+    for the home page.
+    Responses are cached with Redis.""",
+    tags=["Home"],
+    responses={
+        200:HomeSerializer
+    }
+)
 class HomeAPIView(APIView):
-
     def get(self,request):
         cache_key = "home:index"
         cached_data = cache.get(cache_key)
@@ -152,6 +274,30 @@ class HomeAPIView(APIView):
 
 home_view=HomeAPIView.as_view()
 
+@extend_schema(
+    summary="Register User",
+    description="""
+    Creates a new user account.
+    A welcome email is sent asynchronously using Celery.""",
+    tags=["Authentication"],
+    responses={
+        201:RegisterSerializer
+    },
+    examples=[
+        OpenApiExample(
+            "Register Example",
+            value={
+                "username":"testuser",
+                "first_name":"MyName",
+                "Last_name":"MyLastName",
+                "email":"test@example.com",
+                "password1":"StrongPassword123",
+                "password2": "StrongPassword123"
+            },request_only=True
+
+        )
+    ]
+)
 class RegisterAPIView(generics.CreateAPIView):
     serializer_class=RegisterSerializer
     permission_classes=[AllowAny]
@@ -161,6 +307,13 @@ class RegisterAPIView(generics.CreateAPIView):
         send_welcome_email.delay(user.pk)
 auth_register_view=RegisterAPIView.as_view()
 
+@extend_schema(
+    summary="User Profile",
+    description="""
+    Returns the authenticated user's profile.
+    The profile information can also be updated.""",
+    tags=["Authentication"]
+)
 class ProfileAPIView(generics.RetrieveUpdateAPIView):
     serializer_class=ProfileSerializer
     permission_classes=[IsAuthenticated]
@@ -169,6 +322,37 @@ class ProfileAPIView(generics.RetrieveUpdateAPIView):
 
 profile_view=ProfileAPIView.as_view()
 
+
+@extend_schema(
+    summary="Password Change",
+    description="""
+    Changes the authenticated user's password.
+    Authentication is required.
+    The current password must be provided and validated.""",
+    tags=["Authentication"],
+    request=ChangePasswordSerializer,
+    responses={
+        400:OpenApiResponse(
+            description="The current password is not correct"
+        ),200:OpenApiResponse(
+            description="Password changed successfully",
+        )
+    },examples=[
+        OpenApiExample(
+            "Password Change Request",
+            value={
+                "old_password":"hello123",
+                "new_password":"StrongPassword123",
+                "new_password2":"StrongPassword123"
+            },request_only=True
+        ),OpenApiExample(
+            "Successful Response",
+            value={
+                "detail":"Password changed successfully."
+            },response_only=True
+        )
+    ]
+)
 class ChangePasswordAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -180,7 +364,7 @@ class ChangePasswordAPIView(APIView):
         if not user.check_password(
             serializer.validated_data['old_password']):
             return Response(
-                {"old password":["current password is not correct."]
+                {"old_password":["The current password is not correct."]
                  },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -197,6 +381,24 @@ class ChangePasswordAPIView(APIView):
 
 password_change_view=ChangePasswordAPIView.as_view()
 
+@extend_schema(
+    summary="Logout User",
+    description="""
+    Logs out the authenticated user.
+
+    The provided refresh token is added to the blacklist.
+
+    Authentication is required.""",
+    tags=["Authentication"],
+    request=LogOutSerializer,
+    responses={
+        400:OpenApiResponse(
+            description="Invalid refresh token."
+        ),200:OpenApiResponse(
+            description="Logged out successfully."
+        ),
+    }
+)
 class LogOutAPIView(APIView):
     permission_classes=[IsAuthenticated]
     def post(self,request):
@@ -213,13 +415,32 @@ class LogOutAPIView(APIView):
         except TokenError:
             return Response(
                 {
-                    "detail":"Invalid refresh token ."
+                    "detail":"Invalid refresh token."
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
 logout_view=LogOutAPIView.as_view()
 
+@extend_schema(
+    summary="Manage Wishlist",
+    description="""
+    Retrieves the authenticated user's wishlist.
+    Allows adding and removing products from the wishlist.
+    Authentication is required
+    """,
+    tags=["Wishlist"],
+    request=WishlistAddSerializer,
+    responses={
+        201:OpenApiResponse(
+            description="Product added to wishlist."
+        )
+        ,400:OpenApiResponse(
+            description="Product is already in wishlist."
+        ),204:OpenApiResponse(
+            description="Product removed from wishlist.")
+    }
+)
 class WishlistAPIView(APIView):
     permission_classes=[IsAuthenticated]
     def get(self,request,product_id=None):
@@ -255,13 +476,77 @@ class WishlistAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 wishlist_view=WishlistAPIView.as_view()
 
+
+
 class CartAPIVIEW(APIView):
     permission_classes=[IsAuthenticated]
+    @extend_schema(
+        summary="Get Shopping Cart",
+        description="""
+        Retrieves the authenticated user's shopping cart .
+        Authentication is required.""",
+        tags=["Cart"],
+        responses={
+            200: CartSerializer,
+        }
+    )
     def get(self,request):
         cart,created=Cart.objects.get_or_create(user=request.user)
         serializer=CartSerializer(cart)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Manage Shopping Cart",
+        description="""
+        Allows adding products to the shopping cart .
+        Raise error if requested quantity exceeds available stock.
+        Authentication is required.""",
+        tags=["Cart"],
+        request=CartAddSerializer,
+        responses={
+            400: OpenApiResponse(
+                description="Requested quantity exceeds available stock."
+            ), 201: OpenApiResponse(
+                description="Product added or cart updated successfully"
+            ),
+        }, examples=[
+            OpenApiExample(
+                "Add Product To Cart Request",
+                value={
+                    "product_id": 5,
+                    "quantity": 2
+                }, request_only=True
+            ),OpenApiExample(
+                "Add Product To Cart Response",
+                value={
+                    "detail": "Product added to cart",
+                    "cart":{
+                        "id": 1,
+                        "items": [
+                            {
+                                "id": 1,
+                                "product": 5,
+                                "quantity": 2,
+                                "price": 5000,
+                                "total_price": 10000
+                            },
+                            {
+                                "id": 2,
+                                "product": 8,
+                                "quantity": 1,
+                                "price": 1000,
+                                "total_price": 1000
+                            }
+                        ],
+                        "total_items": 3,
+                        "grand_total": 11000,
+                        "updated_at": "2026-08-01T08:01:29.619Z",
+                        "created_at": "2026-08-01T08:01:29.619Z",
+                    },
+                },response_only=True
+            )
+        ]
+    )
     def post(self,request):
         serializer = CartAddSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -299,8 +584,26 @@ class CartAPIVIEW(APIView):
         )
 cart_view=CartAPIVIEW.as_view()
 
+
 class CartItemAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    @extend_schema(
+        summary="Update Cart Item",
+        description="""
+        Updates the quantity of a specific item in the authenticated user's shopping cart.
+        Returns an error if requested quantity exceeds the available stock .
+        Authentication is required.""",
+        tags=["Cart"],
+        request=CartSerializer,
+        responses={
+            200:OpenApiResponse(
+                description="Cart items updated."
+            ),
+            400:OpenApiResponse (
+                description="Requested quantity exceeds available stock"
+            )
+        }
+    )
     def patch(self,request,item_id):
         serializer = CartUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -319,7 +622,18 @@ class CartItemAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
-
+    @extend_schema(
+        summary="Remove Cart Item",
+        description="""
+        Removes the specified item from the authenticated user's shopping cart.
+        Authentication is required.""",
+        tags=["Cart"],
+        responses={
+            204:OpenApiResponse(
+                description="Item deleted from shopping cart."
+            )
+        }
+    )
     def delete(self, request, item_id):
         cart = get_object_or_404(Cart, user=request.user)
         cart_item = get_object_or_404(CartItem, id=item_id, cart=cart)
@@ -329,7 +643,18 @@ class CartItemAPIView(APIView):
         )
 cart_item_view=CartItemAPIView.as_view()
 
-
+@extend_schema(
+    summary="Clear Shopping Cart ",
+    description="""Removes all items from the authenticated user's shopping cart.
+    Authentication is required.
+    """,
+    tags=["Cart"],
+    responses={
+        204:OpenApiResponse(
+            description="Shopping cart cleared successfully."
+        )
+    }
+)
 class ClearCartAPIView(APIView):
     permission_classes=[IsAuthenticated]
     def delete(self,request):
@@ -338,20 +663,46 @@ class ClearCartAPIView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 cart_clear_view=ClearCartAPIView.as_view()
 
+
+@extend_schema(
+    summary="Manage Order",
+    description="""
+    Creates a new order from the authenticated user's shopping cart.
+    Product stock is updated automatically.
+    An order confirmation email is sent asynchronously using Celery.
+    Authentication is required.""",
+    tags=["Orders"],
+    responses={
+        400:OpenApiResponse(
+            description="Cart is empty"
+        ),201:OrderListSerializer
+    },examples=[
+        OpenApiExample(
+            "Successful Response",
+            value={
+                "id": 1,
+                "created_at": "2026-08-01T08:01:29.619Z",
+                "status": "pending",
+                "total_price": 125000
+            },
+            response_only=True,
+        )
+    ]
+)
 class OrderAPIView(generics.ListCreateAPIView):
     permission_classes=[IsAuthenticated]
     serializer_class=OrderListSerializer
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return Order.objects.filter(user=self.request.user).order_by('-created_at')
 
     @transaction.atomic
     def post(self, request):
-        cart = get_object_or_404(Cart, user=request.user)
+        cart,_ = Cart.objects.get_or_create(user=request.user)
         cart_items = cart.items.all()
         if not cart_items.exists():
             return Response(
                 {
-                    "detail": "Cart is empty"
+                    "detail": "Cart is empty."
                 }, status=status.HTTP_400_BAD_REQUEST,
             )
         for items in cart_items:
@@ -359,7 +710,8 @@ class OrderAPIView(generics.ListCreateAPIView):
                 return Response(
                     {
                         "detail": f"Only {items.product.stock_quantity} items of {items.product.name} are available."
-                    }
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
                 )
         order = Order.objects.create(
             user=request.user,
@@ -380,6 +732,14 @@ class OrderAPIView(generics.ListCreateAPIView):
 
 order_view=OrderAPIView.as_view()
 
+@extend_schema(
+    summary="Order Details",
+    description="""
+    Returns detailed information about the specified order.
+    Only the authenticated user's own orders can be accessed .
+    Authentication is required .""",
+    tags=["Orders"]
+)
 class OrderDetailAPIView(generics.RetrieveAPIView):
     permission_classes=[IsAuthenticated]
     serializer_class=OrderDetailSerializer
@@ -388,3 +748,27 @@ class OrderDetailAPIView(generics.RetrieveAPIView):
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
 order_detail_view=OrderDetailAPIView.as_view()
+
+@extend_schema(
+    summary="User Login",
+    description="Authenticated the user and return JWT access and refresh tokens.",
+    tags=["Authentication"],
+    examples=[
+        OpenApiExample(
+            "Login Request",
+            value={
+                "username":"testuser",
+                "password":"StrongPassword123"
+            },request_only=True
+        ),OpenApiExample(
+            "Successful Response",
+            value={
+                "refresh":"eyJhbGc...",
+                "access":"eyJhbGc..."
+            },response_only=True
+        ),
+    ],
+)
+class LoginAPIView(TokenObtainPairView):
+    pass
+login_view=LoginAPIView.as_view()

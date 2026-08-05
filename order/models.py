@@ -24,5 +24,5 @@ class OrderItem(models.Model):
     price=models.DecimalField(max_digits=12,decimal_places=2)
 
     @property
-    def total_price(self):
+    def total_price(self)->float:
         return self.quantity * self.price
